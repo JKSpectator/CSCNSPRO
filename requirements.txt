@@ -1,0 +1,7 @@
+numpy
+networkx
+scipy
+PyAstronomy
+PyQt5
+vtk
+numba

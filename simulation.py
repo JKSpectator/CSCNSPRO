@@ -772,6 +772,7 @@ class Simulation():
             self.time_for_frame = time.time() - self.time_1
             self.statusReport()
 
+
     def renderToPng(self, path=PNG_OUTPUT_PATH):
         """
 		Take a .png of the render window, and save it.
@@ -833,6 +834,8 @@ class Simulation():
 
         self.interactor.Initialize()
         print('initialized interactor')
+
+
 
         # set up a timer to call the update function at a max rate
         # of every 7 ms (~144 hz)

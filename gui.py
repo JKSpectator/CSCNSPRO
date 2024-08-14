@@ -223,7 +223,7 @@ class ApplicationWindow(QWidget):
 		self.node2Label = QLabel("Node 2:")
 		self.node2Select = QComboBox()
 		self.node2Select.activated[str].connect(self.setPathNode2)
-		self.calcPathButton = QPushButton("Enable Path Calculation")
+		self.calcPathButton = QPushButton("激活链路计算")
 		self.calcPathButton.setCheckable(True)
 		self.calcPathButton.clicked.connect(self.togglePathCalculation)
 		self.controls.addWidget(self.node1Label, 7, 0)
@@ -379,11 +379,11 @@ class ApplicationWindow(QWidget):
 						self.node2Select.addItems(recv[1])
 					elif command == 'delay':
 						temp = recv[1]
-						self.delay_idealTimeLabel.setText(f'Ideal Delay (s): {temp}')
+						self.delay_idealTimeLabel.setText(f'Ideal Delay (s): {temp:.5f}')
 						temp = recv[2]
-						self.delay_noTimeLabel.setText(f'No Noisy Delay (s): {temp}')
+						self.delay_noTimeLabel.setText(f'No Noisy Delay (s): {temp:.5f}')
 						temp = recv[3]
-						self.delay_normalTimeLabel.setText(f'Normal Delay (s): {temp}')
+						self.delay_normalTimeLabel.setText(f'Normal Delay (s): {temp:.5f}')
 
 			except EOFError:
 				break
