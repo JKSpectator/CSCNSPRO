@@ -59,7 +59,7 @@ GML_OUTPUT_PATH = 'gmls/g'  # where to save gml files
 
 MIN_SAT_ELEVATION = 10  # degrees-30
 
-EARTHFILE = "WorldMap.jpg"
+EARTHFILE = "ChinaMap.jpg"
 
 LANDMASS_OUTLINE_COLOR = (0.0, 0.0, 0.0)  # black, best contrast
 EARTH_LAND_OPACITY = 1.0
@@ -1132,8 +1132,8 @@ class Simulation():
         self.earthRadius = earth_radius
         # Generate an sphere polydata
         sphere = vtk.vtkSphereSource()
-        sphere.SetThetaResolution(24)
-        sphere.SetPhiResolution(24)
+        sphere.SetThetaResolution(50)
+        sphere.SetPhiResolution(50)
         sphere.SetRadius(EARTH_RADIUS)
 
         sphere.SetStartTheta(0)
@@ -1163,7 +1163,7 @@ class Simulation():
         self.earthActor = vtk.vtkActor()
         self.earthActor.SetMapper(mapper)
         self.earthActor.SetTexture(texture)
-        self.earthActor.RotateZ(181)
+        self.earthActor.RotateZ(179)
 
         self.earthRadius = earth_radius
 
@@ -1175,7 +1175,7 @@ class Simulation():
 
         # want this to be slightly larger than the sphere it sits on
         # so that it is not occluded by the sphere
-        self.earthSource.SetRadius(self.earthRadius * 1.01)
+        self.earthSource.SetRadius(self.earthRadius * 1.0001)
 
         # controles the resolution of surface data (1 = full resolution)
         self.earthSource.SetOnRatio(1)
