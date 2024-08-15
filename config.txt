@@ -1,0 +1,9 @@
+name config
+EARTH_RADIUS 6371000
+MAKE_LINKS True
+NETWORK_DESIGNS SPARSE
+planesNum 12
+nodesNum 12
+inc 65.0
+sma 500
+timeStep 10

@@ -19,7 +19,6 @@
 ######################################################################
 
 # used to make program faster & responsive
-import threading as td
 
 # memory aligned arrays their manipulation for Python
 import numpy as np
@@ -38,8 +37,7 @@ import time
 
 # try to import numba funcs
 try:
-    import numba_funcs as nf
-
+    import numba as nf
     USING_NUMBA = True
 except ModuleNotFoundError:
     USING_NUMBA = False
@@ -117,17 +115,10 @@ def getFileNumber(var):
         mask[i + t] = var[i]
     return ''.join(mask)
 
-
-###############################################################################
-#                             SIMULATION CONTROL                              #
-###############################################################################
-
-
 class Simulation():
 
     def __init__(
             self,
-            pipeConn=None,
             planes=1,
             nodesPerPlane=1,
             inclination=70,
@@ -135,7 +126,6 @@ class Simulation():
             timeStep=10,
             makeLinks=True,
             animate=True,
-            captureImages=False,
             captureInterpolation=1,
             captureGML=False,
             groundPtsFile='city_data.txt',
@@ -178,7 +168,7 @@ class Simulation():
             # timing control
             self.time_step = 1
             self.current_simulation_time = int(float(G.graph['simulationTime']))
-            self.pause = True
+            self.pause = False
             self.num_steps_to_run = -1
 
             # performance data
@@ -194,12 +184,6 @@ class Simulation():
             # returns in data in string format, so I convert data to ints
             for i in range(len(edge_data)):
                 edge_data[i] = [int(edge_data[i][0]), int(edge_data[i][1])]
-
-            # init the 'pipe' object used for inter-process communication
-            # this comes from the multiprocessing library
-            self.pipeConn = pipeConn
-            self.controlThread = td.Thread(target=self.controlThreadHandler)
-            self.controlThread.start()
 
             # init the Constellation model
             self.model = Constellation(
@@ -288,16 +272,15 @@ class Simulation():
             # control flags
             self.animate = animate
             self.capture_gml = captureGML
-            self.capture_images = captureImages
             self.capt_interpolation = 1
             self.make_links = makeLinks
             self.linking_method = 'SPARSE'  # options: 'IDEAL', '+GRID', 'SPARSE'
-            self.enable_path_calculation = False
+            self.enable_path_calculation = True
 
             # timing control
             self.time_step = timeStep
             self.current_simulation_time = 0.0
-            self.pause = True
+            self.pause = False
             self.num_steps_to_run = -1
 
             # performance data
@@ -307,12 +290,6 @@ class Simulation():
             self.time_to_export_gml = 1
             self.time_to_update_render = 1
             self.time_to_export_img = 1
-
-            # init the 'pipe' object used for inter-process communication
-            # this comes from the multiprocessing library
-            self.pipeConn = pipeConn
-            self.controlThread = td.Thread(target=self.controlThreadHandler)
-            self.controlThread.start()
 
             # init the Constellation model
             self.model = Constellation(
@@ -339,9 +316,8 @@ class Simulation():
                 self.city_names.append(self.data[i][0])
                 self.model.addGroundPoint(float(self.data[i][1]), float(self.data[i][2]))
 
-            # send the names to the GUI so the user
-            # can see them in drop down menu
-            self.pipeConn.send(["placeNames", self.city_names])
+            self.setPathNode1(self.city_names[0])
+            self.setPathNode2(self.city_names[1])
 
             # init the network design
             if self.make_links:
@@ -358,8 +334,7 @@ class Simulation():
                     -self.model.ground_node_counter,
                     self.model.getArrayOfGndPositions(),
                     self.time_step,
-                    self.current_simulation_time,
-                    self.capture_images
+                    self.current_simulation_time
                 )
 
             else:
@@ -396,95 +371,34 @@ class Simulation():
 
         print("done initalizing")
 
-    def controlThreadHandler(self):
-        """
-		Start a thread to deal with inter-process communications
+    def togglePause(self):
+        self.pause = not self.pause
 
-		"""
+    def enablePathCalc(self):
+        self.enable_path_calculation = True
+        print("enabled path calculation")
 
-        while True:
-            received_data = self.pipeConn.recv()
-            if type(received_data) == str:
-                if received_data == "testDelay":
-                    self.updateDelay()
+    def disablePathCalc(self):
+        self.enable_path_calculation = False
+        print("disabled path calculation")
 
-                if received_data == "enableImageCapture":
-                    print("enabled image capture")
-                    self.capture_images = True
+    def setPathNode1(self, path_node_1):
+        self.path_node_1 = path_node_1
+        id = self.city_names.index(self.path_node_1)
+        self.model.setCalGroundPoint(id, 0)
+        print("set path node 1: ", self.path_node_1)
 
-                if received_data == "disableImageCapture":
-                    print("disabled image capture")
-                    self.capture_images = False
+    def setPathNode2(self, path_node_2):
+        self.path_node_2 = path_node_2
+        id = self.city_names.index(self.path_node_2)
+        self.model.setCalGroundPoint(id, 1)
+        print("set path node 1: ", self.path_node_2)
 
-                if received_data == "enableGMLCapture":
-                    print("enabled GML capture")
-                    self.capture_gml = True
-
-                if received_data == "disableGMLCapture":
-                    print("disabled GML capture")
-                    self.capture_gml = False
-
-                if received_data == "toggleLinks":
-                    self.make_links = not self.make_links
-
-                if received_data == "togglePause":
-                    self.pause = not self.pause
-                    print('toggle pause recived by sim, pause is: ', self.pause)
-
-                if received_data == "enablePathCalc":
-                    self.enable_path_calculation = True
-                    print("enabled path calculation")
-
-                if received_data == "disablePathCalc":
-                    self.enable_path_calculation = False
-                    print("disabled path calculation")
-
-            elif type(received_data) == list:
-                command = received_data[0]
-                if command == "setTimestep":
-                    print("setting timestep to: ", received_data[1])
-                    self.time_step = received_data[1]
-
-                if command == "setLinkingMethod":
-                    self.linking_method = received_data[1]
-                    print("set linking method to: ", received_data[1])
-                    # if reset linking method, must reinit network
-                    self.initializeNetworkDesign()
-
-                if command == "setRunfor":
-                    self.num_steps_to_run = int(received_data[1] / self.time_step) - 1
-                    print("running for: ", self.num_steps_to_run, " timesteps...")
-                    self.pause = False
-
-                if command == 'setPathNode1':
-                    self.path_node_1 = received_data[1]
-                    id = self.city_names.index(self.path_node_1)
-                    self.model.setCalGroundPoint(id, 0)
-                    print("set path node 1: ", self.path_node_1)
-
-                if command == 'setPathNode2':
-                    self.path_node_2 = received_data[1]
-                    id = self.city_names.index(self.path_node_2)
-                    self.model.setCalGroundPoint(id, 1)
-                    print("set path node 2: ", self.path_node_2)
-
-            else:
-                print(received_data)
-
-    def statusReport(self):
-        """
-		sends some status data like current time back to host process
-
-		"""
-
-        self.pipeConn.send(["simTime", self.current_simulation_time])
-        self.pipeConn.send(['timeForFrame', self.time_for_frame])
-        self.pipeConn.send(['timeToUpdateModel', self.time_to_update_model])
-        self.pipeConn.send(['timeToExportGML', self.time_to_export_gml])
-        self.pipeConn.send(['timeToUpdateRender', self.time_to_update_render])
-        self.pipeConn.send(['timeToExportImg', self.time_to_export_img])
-        self.pipeConn.send(['pathNodeNumber', self.path_node_num])
-        self.pipeConn.send(['totalNumberOfLinks', self.model.total_links])
+    def setLinkingMethod(self, linking_method):
+        self.linking_method = linking_method
+        print("set linking method to: ", linking_method)
+        # if reset linking method, must reinit network
+        self.initializeNetworkDesign()
 
     def updateModel(self, new_time):
         """
@@ -567,7 +481,7 @@ class Simulation():
             ms.communication_stt(self.model.getDistance(node[0], node[1]))
             ms.communication_stt_ideal(self.model.getDistance(node[0], node[1]))
             ms.communication_stt_no_noisy(self.model.getDistance(node[0], node[1]))
-        self.pipeConn.send(['delay', ms.delay_ideal, ms.delay_no_noisy, ms.delay_normal])
+        print(f"delay ideal: {ms.delay_ideal:.5f}, delay no noisy: {ms.delay_no_noisy:.5f}, delay normal: {ms.delay_normal:.5f}")
 
     ###############################################################################
     #                           ANIMATION FUNCTIONS                               #
@@ -604,8 +518,7 @@ class Simulation():
             total_groundpoints,
             groundpoint_positions,
             timestep=60,
-            current_simulation_time=0,
-            capture_images=False):
+            current_simulation_time=0):
         """
 		Makes vtk render window, and sets up pipelines.
 
@@ -630,7 +543,6 @@ class Simulation():
 
         self.current_simulation_time = current_simulation_time
         self.time_step = timestep
-        self.capture_images = capture_images
 
         self.frameCount = 0
         self.incFrameCount = 1
@@ -759,18 +671,12 @@ class Simulation():
             self.time_to_update_render = (time.time() - self.time_1) - \
                                          (self.time_to_update_model + self.time_to_export_gml)
 
-        if self.capture_images \
-                and self.frameCount % self.capt_interpolation == 0 \
-                and not self.pause:
-            self.renderToPng()
-
         if not self.pause:
             self.time_to_export_img = (time.time() - self.time_1) - \
                                       (self.time_to_update_model + self.time_to_export_gml +
                                        self.time_to_update_render)
 
             self.time_for_frame = time.time() - self.time_1
-            self.statusReport()
 
 
     def renderToPng(self, path=PNG_OUTPUT_PATH):
