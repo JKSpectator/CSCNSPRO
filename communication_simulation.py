@@ -8,6 +8,20 @@ import random
 处理时延，没有处理，0
 '''
 
+def generate_gauss_in_range(a, b):
+    mean = (a + b) / 2
+    std_dev = (b - a) / 6
+    while True:
+        num = random.gauss(mean, std_dev)
+        if a <= num <= b:
+            return num
+
+def random_in_range(a, b):
+    # 生成 [0, 1) 区间内的随机数
+    random_number = random.random()
+    # 将随机数缩放到 [a, b] 区间内
+    scaled_random_number = a + (b - a) * random_number
+    return scaled_random_number
 
 class Communication:
     def __init__(self, configfile='communication_config.txt'):
@@ -20,6 +34,8 @@ class Communication:
         self.velocity = 3e+8
         self.packet_size = 12000
         self.noisy = 0  # 0 没有噪声, 1 高斯噪声, 2 均匀噪声
+        self.distribution_left = 0
+        self.distribution_right = 1
         with open(configfile, 'r') as f:
             for line in f:
                 words = line.split()
@@ -31,6 +47,10 @@ class Communication:
                     self.packet_size = int(words[1])
                 elif words[0] == 'noisy':
                     self.noisy = int(words[1])
+                elif words[0] == 'distribution_left':
+                    self.distribution_left = float(words[1])
+                elif words[0] == 'distribution_right':
+                    self.distribution_right = float(words[1])
 
     def communication_stt(self, distance=5e+5, packet_size=0, bandwidth=-1, is_attacked=False, add_delay=True):
         if packet_size == 0:
@@ -42,15 +62,9 @@ class Communication:
         if self.noisy != 0:
             random.seed(0)
             if self.noisy == 1:
-                rm = random.gauss(0, 0.1)
-                while rm + 1 == 0:
-                    rm = random.gauss(0, 0.1)
-                bandwidth *= rm
+                bandwidth = generate_gauss_in_range(self.distribution_left * bandwidth, self.distribution_right * bandwidth)
             elif self.noisy == 2:
-                rm = random.random() * 2
-                while rm == 0:
-                    rm = random.random() * 2
-                bandwidth *= rm
+                bandwidth = random_in_range(self.distribution_left * bandwidth, self.distribution_right * bandwidth)
 
         delay = 0
         send_delay = packet_size / bandwidth
