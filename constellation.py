@@ -1149,6 +1149,7 @@ class Constellation():
 
         number_of_gnd_links = link_idx - number_of_isl_links
         total_links = link_idx
+        # print(number_of_gnd_links)
         return [number_of_isl_links, number_of_gnd_links, total_links]
 
     def import_links_from_gml_data(self, links):
